@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "projeto-ecommerce",
+    "slug": "projeto-ecommerce",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "projetoecommerce",
+    "userInterfaceStyle": "automatic",
+    "web": { "output": "static" },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
