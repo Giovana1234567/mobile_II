@@ -1,0 +1,12 @@
+# Referência (não versionar) — material de aula e enunciados
+Conteudo feito em aula - Descompactado/
+Conteudos feitos em aula - Compilado/
+Materiais da materia/
+
+# Projeto Expo
+node_modules/
+.expo/
+dist/
+web-build/
+*.log
+.DS_Store
