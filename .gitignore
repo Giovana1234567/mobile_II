@@ -1,7 +1,5 @@
-# Referência (não versionar) — material de aula e enunciados
-Conteudo feito em aula - Descompactado/
-Conteudos feitos em aula - Compilado/
-Materiais da materia/
+# Backups de .git de subprojetos (renomeados para não virarem submódulo)
+_git_backup/
 
 # Projeto Expo
 node_modules/

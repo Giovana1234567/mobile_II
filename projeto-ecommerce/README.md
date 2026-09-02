@@ -8,33 +8,51 @@ Construído nos moldes dos exercícios de aula (`aula-19-08`, `correcao-exercici
 
 ```bash
 npm install
+npx expo install expo-secure-store
 npx expo start
 ```
+Tutorial completo (criar do zero, limpar, testar): `../Materiais da materia/Tutorial-Rodar-Projeto.md`
 
-## Estrutura (a "receita" que se repete em toda tela)
+## Estrutura
 
 ```
 src/
-├── utils/api.ts              1º: instância do Axios + interceptors (token, erro)
+├── utils/
+│   ├── api.ts                1º: instância Axios + interceptors (token, erro)
+│   └── sessao.ts             token seguro (expo-secure-store)
 ├── types/produto.response.ts 2º: contrato dos dados da API
 ├── hooks/
-│   ├── useProdutos.ts        3º: acesso à API com AXIOS  (carregar/criar/atualizar/deletar)
+│   ├── useProdutos.ts        3º: AXIOS  — carregar/carregarUm/criar/atualizar/deletar/categorias
 │   ├── useProdutosFetch.ts       mesma interface com FETCH (para comparar)
-│   └── useAuth.ts                login (POST /auth/login)
-├── components/               peças visuais reutilizáveis (sem lógica de API)
-│   ├── Campo.tsx             TextInput + rótulo
-│   ├── EstadoTela.tsx        <Carregando /> e <Erro />
-│   └── ProdutoCard.tsx       card de 1 produto
+│   └── useAuth.ts                login/logout (POST /auth/login + SecureStore)
+├── ui/                       SÓ aparência (tema, Tela, Texto, Botao, Cartao, Etiqueta)
+├── components/               apoio (Campo, EstadoTela, ProdutoCard, FiltroCategorias)
 └── app/                      telas (expo-router, file-based routing)
-    ├── _layout.tsx           QueryClientProvider + <Stack>
+    ├── _layout.tsx           QueryClientProvider + <Stack> + recarrega token no boot
     ├── login.tsx             fluxo de autenticação (useMutation)
-    ├── index.tsx             lista + cadastro + exclusão (useQuery + useMutation + invalidate)
-    └── infinita.tsx          BÔNUS: useInfiniteQuery
+    ├── index.tsx             lista + filtro por categoria + POST + DELETE + pull-to-refresh
+    ├── produto/[id].tsx      detalhe (rota dinâmica) + PUT com ATUALIZAÇÃO OTIMISTA
+    └── infinita.tsx          useInfiniteQuery (scroll infinito)
 ```
 
-## Fluxo de dados (sempre o mesmo)
+## Cobertura da matéria (Módulo 1)
 
-`tela` → chama `useQuery/useMutation` → que chama função do `hook` → que chama `api` (axios) → `interceptor` anexa token → API responde → `interceptor` trata erro → cache do TanStack Query guarda o resultado.
+| Tema | Onde |
+|---|---|
+| Axios: instância, `baseURL`, interceptors, timeout | `utils/api.ts` |
+| `fetch` x Axios (limitações) | `hooks/useProdutosFetch.ts` |
+| Tratamento de erro centralizado | interceptor de response em `api.ts` |
+| `useQuery`: queryKey, queryFn, staleTime, gcTime, retry, `enabled` | `_layout.tsx`, `index.tsx`, `produto/[id].tsx` |
+| Estados: isLoading / isFetching / error | `index.tsx`, `EstadoTela.tsx` |
+| queryKey dinâmica / cache por filtro | `index.tsx` (categoria) |
+| Mutations POST / PUT / DELETE | `index.tsx` (POST, DELETE), `produto/[id].tsx` (PUT) |
+| `invalidateQueries` | todas as mutations |
+| Atualização otimista + rollback | `produto/[id].tsx` (`onMutate`/`onError`/`onSettled`) |
+| `useInfiniteQuery` (`fetchNextPage`, `onEndReached`) | `infinita.tsx` |
+| Login + token no header via interceptor | `useAuth.ts` + `api.ts` |
+| Armazenamento seguro do token | `utils/sessao.ts` (SecureStore) |
+| Rota dinâmica (`useLocalSearchParams`) | `produto/[id].tsx` |
+| pull-to-refresh (`RefreshControl` + `refetch`) | `index.tsx` |
 
 ## Credenciais de teste (fakestoreapi)
 

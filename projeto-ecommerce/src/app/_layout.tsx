@@ -1,31 +1,38 @@
 // ============================================================================
 // app/_layout.tsx  →  raiz do app (expo-router).
-// 2 responsabilidades:
-//   1) criar o QueryClient e envolver tudo no QueryClientProvider
-//      (SEM isso, nenhum useQuery/useMutation funciona -> erro "No QueryClient set");
-//   2) definir a navegação (<Stack>).
-// (Idêntico a "revisao-pre-ava1/src/app/_layout.tsx", + a tela de login.)
+//   1) cria o QueryClient e envolve tudo no QueryClientProvider
+//      (SEM isso: erro "No QueryClient set, use QueryClientProvider");
+//   2) na inicialização, recarrega o token salvo (SecureStore) -> "lembra" o login;
+//   3) define a navegação (<Stack>).
 // ============================================================================
 
+import { definirToken } from "@/utils/api";
+import { lerToken } from "@/utils/sessao";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
+import { useEffect } from "react";
 
-// Criado FORA do componente: 1 instância para todo o ciclo de vida do app.
+// Fora do componente: 1 instância para todo o ciclo de vida do app.
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60, // 1 min "fresco" antes de refazer a busca
-      retry: 2, // tenta 2x antes de considerar erro
-    },
+    queries: { staleTime: 1000 * 60, retry: 2 },
   },
 });
 
 export default function RootLayout() {
+  // Recupera o token guardado e devolve para o interceptor do Axios.
+  useEffect(() => {
+    lerToken().then((token) => {
+      if (token) definirToken(token);
+    });
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Stack>
         <Stack.Screen name="login" options={{ title: "Entrar" }} />
         <Stack.Screen name="index" options={{ title: "Produtos" }} />
+        <Stack.Screen name="produto/[id]" options={{ title: "Detalhe" }} />
         <Stack.Screen name="infinita" options={{ title: "Lista infinita" }} />
       </Stack>
     </QueryClientProvider>

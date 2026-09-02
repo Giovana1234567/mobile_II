@@ -39,5 +39,25 @@ export function useProdutos() {
     return resposta.data;
   };
 
-  return { carregar, carregarUm, criar, atualizar, deletar };
+  // GET /products/categories -> string[]
+  const carregarCategorias = async (): Promise<string[]> => {
+    const resposta = await api.get<string[]>("/products/categories");
+    return resposta.data;
+  };
+
+  // GET /products/category/:nome -> Produto[]
+  const carregarPorCategoria = async (categoria: string): Promise<Produto[]> => {
+    const resposta = await api.get<Produto[]>(`/products/category/${categoria}`);
+    return resposta.data;
+  };
+
+  return {
+    carregar,
+    carregarUm,
+    criar,
+    atualizar,
+    deletar,
+    carregarCategorias,
+    carregarPorCategoria,
+  };
 }

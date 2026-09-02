@@ -1,44 +1,48 @@
 // ============================================================================
-// app/index.tsx  →  tela principal: LISTA + CADASTRO + EXCLUSÃO de produtos.
+// app/index.tsx  →  tela principal: LISTA + FILTRO + CADASTRO + EXCLUSÃO.
 // Concentra o que mais cai na prova:
-//   - useQuery      -> ler a lista (com cache)
-//   - useMutation   -> criar / excluir (ações)
-//   - invalidateQueries -> recarregar a lista depois de mudar algo
-//   - estados isLoading / error tratados ANTES do return principal
+//   - useQuery com queryKey DINÂMICA (muda com a categoria) -> cache por filtro
+//   - useMutation (POST e DELETE) + invalidateQueries
+//   - pull-to-refresh (RefreshControl + refetch)
+//   - navegação para a tela de detalhe (rota dinâmica /produto/[id])
 //
-// Para testar a VERSÃO FETCH: troque a linha de import abaixo por
+// Versão FETCH: troque o import por
 //   import { useProdutosFetch as useProdutos } from "@/hooks/useProdutosFetch";
 // ============================================================================
 
 import { Campo } from "@/components/Campo";
 import { Carregando, Erro } from "@/components/EstadoTela";
+import { FiltroCategorias } from "@/components/FiltroCategorias";
 import { ProdutoCard } from "@/components/ProdutoCard";
 import { useProdutos } from "@/hooks/useProdutos";
 import { Produto } from "@/types/produto.response";
+import { Botao } from "@/ui/Botao";
+import { Tela } from "@/ui/Tela";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, Button, FlatList, StyleSheet, View } from "react-native";
-
-const CHAVE_PRODUTOS = ["produtos"]; // queryKey reutilizada (buscar + invalidar)
+import { Alert, FlatList, RefreshControl } from "react-native";
 
 export default function Index() {
-  const { carregar, criar, deletar } = useProdutos();
-  const queryClient = useQueryClient();
+  const { carregar, carregarPorCategoria, criar, deletar } = useProdutos();
+  const qc = useQueryClient();
 
+  const [categoria, setCategoria] = useState<string | null>(null);
   const [titulo, setTitulo] = useState("");
   const [preco, setPreco] = useState("");
 
-  // -------- LEITURA: useQuery --------
-  const { data, isLoading, error } = useQuery({
-    queryKey: CHAVE_PRODUTOS,
-    queryFn: carregar, // Produto[] (array direto -> data já é a lista)
+  // queryKey muda com a categoria -> cada filtro tem seu próprio cache
+  const chave = categoria ? ["produtos", categoria] : ["produtos"];
+
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
+    queryKey: chave,
+    queryFn: () => (categoria ? carregarPorCategoria(categoria) : carregar()),
   });
 
-  // -------- AÇÃO: criar produto --------
-  const criarMutation = useMutation({
-    mutationFn: (novo: Produto) => criar(novo),
+  const criarMut = useMutation({
+    mutationFn: (p: Produto) => criar(p),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CHAVE_PRODUTOS }); // recarrega a lista
+      qc.invalidateQueries({ queryKey: ["produtos"] });
       setTitulo("");
       setPreco("");
       Alert.alert("Produto cadastrado!");
@@ -46,56 +50,46 @@ export default function Index() {
     onError: (e) => Alert.alert("Erro ao cadastrar", e.message),
   });
 
-  // -------- AÇÃO: excluir produto --------
-  const excluirMutation = useMutation({
+  const excluirMut = useMutation({
     mutationFn: (id: number) => deletar(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CHAVE_PRODUTOS }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["produtos"] }),
     onError: (e) => Alert.alert("Erro ao excluir", e.message),
   });
 
-  const salvar = () => {
-    criarMutation.mutate({
+  const salvar = () =>
+    criarMut.mutate({
       title: titulo,
       price: Number(preco),
       description: "",
-      category: "",
+      category: categoria ?? "electronics",
       image: "https://i.pravatar.cc",
     });
-  };
 
-  // -------- estados tratados antes do conteúdo principal --------
   if (isLoading) return <Carregando texto="Carregando produtos..." />;
   if (error) return <Erro texto={error.message} />;
 
-  // -------- conteúdo --------
   return (
-    <View style={styles.container}>
+    <Tela>
       <Campo label="Título" value={titulo} onChangeText={setTitulo} />
-      <Campo
-        label="Preço"
-        value={preco}
-        onChangeText={setPreco}
-        keyboardType="numeric"
-      />
-      <Button
-        title={criarMutation.isPending ? "Salvando..." : "Salvar produto"}
-        onPress={salvar}
-        disabled={criarMutation.isPending}
-      />
+      <Campo label="Preço" value={preco} onChangeText={setPreco} keyboardType="numeric" />
+      <Botao titulo="Salvar produto" onPress={salvar} carregando={criarMut.isPending} />
+
+      <FiltroCategorias selecionada={categoria} aoSelecionar={setCategoria} />
 
       <FlatList
-        style={styles.lista}
         data={data}
         keyExtractor={(item) => String(item.id)}
+        refreshControl={
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} />
+        }
         renderItem={({ item }) => (
-          <ProdutoCard produto={item} onExcluir={(id) => excluirMutation.mutate(id)} />
+          <ProdutoCard
+            produto={item}
+            onPress={() => router.push(`/produto/${item.id}`)}
+            onExcluir={(id) => excluirMut.mutate(id)}
+          />
         )}
       />
-    </View>
+    </Tela>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  lista: { marginTop: 12 },
-});

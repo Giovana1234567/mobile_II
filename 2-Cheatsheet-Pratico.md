@@ -245,6 +245,54 @@ const produtos = q.data?.pages.flatMap((p) => p.itens) ?? [];
 
 ---
 
+## 8b. Rota dinâmica + tela de detalhe (`app/produto/[id].tsx`)
+
+```tsx
+import { useLocalSearchParams } from "expo-router";
+
+const { id } = useLocalSearchParams<{ id: string }>();      // pega o :id da URL
+const idNum = Number(id);
+
+const { data: produto } = useQuery({
+  queryKey: ["produto", idNum],                              // key inclui o id
+  queryFn: () => carregarUm(idNum),
+  enabled: !Number.isNaN(idNum),                             // só busca se id válido
+});
+// navegar para cá:  router.push(`/produto/${item.id}`)
+```
+> `enabled: false` = a query **não roda** até virar `true` (queries dependentes: só buscar produto depois do login, só buscar detalhe com id válido).
+
+## 8c. Atualização otimista (PUT/DELETE que reflete na hora)
+
+```tsx
+const editar = useMutation({
+  mutationFn: (p: Produto) => atualizar(p),
+  onMutate: async (p) => {
+    await qc.cancelQueries({ queryKey: ["produto", p.id] });     // 1. evita corrida
+    const anterior = qc.getQueryData(["produto", p.id]);         // 2. snapshot
+    qc.setQueryData(["produto", p.id], p);                       // 3. aplica já na UI
+    return { anterior };                                         // 4. passa p/ onError
+  },
+  onError: (_e, _p, ctx) => qc.setQueryData(["produto", _p.id], ctx?.anterior), // rollback
+  onSettled: (_d, _e, p) => qc.invalidateQueries({ queryKey: ["produto", p.id] }), // confirma
+});
+```
+> Invalidação (padrão) = simples, consistente, 1 request a mais. Otimista = UI instantânea, mais código (precisa do rollback). Escolha pela frequência da ação.
+
+## 8d. queryKey dinâmica (cache por filtro) + pull-to-refresh
+
+```tsx
+const chave = categoria ? ["produtos", categoria] : ["produtos"];
+const { data, refetch, isFetching } = useQuery({
+  queryKey: chave,
+  queryFn: () => (categoria ? carregarPorCategoria(categoria) : carregar()),
+});
+// <FlatList refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} />} />
+```
+> Cada `categoria` vira uma entrada de cache separada — trocar o filtro e voltar não re-busca.
+
+---
+
 ## 9. ⚠️ Erros mais comuns (onde as questões te derrubam)
 
 | # | Erro | Sintoma | Correção |
@@ -264,6 +312,11 @@ const produtos = q.data?.pages.flatMap((p) => p.itens) ?? [];
 | 13 | `price` vindo do `TextInput` como string | NaN / API recusa | `Number(preco)` antes de enviar |
 | 14 | Import do alias errado | "cannot find module" | `@/hooks/...` (ver `paths` no `tsconfig`) |
 | 15 | `onEndReached` disparando em loop | requisições infinitas | checar `hasNextPage` e ajustar `onEndReachedThreshold` |
+| 16 | Update otimista sem `return { anterior }` no `onMutate` | rollback não funciona | retornar o snapshot; usar no `onError` via `ctx` |
+| 17 | Update otimista sem `cancelQueries` | refetch em voo sobrescreve a UI | `await qc.cancelQueries({ queryKey })` no início do `onMutate` |
+| 18 | `useLocalSearchParams` retorna `string` | `carregarUm("3")` quebra o tipo | `Number(id)` + `enabled: !Number.isNaN(idNum)` |
+| 19 | Nome do arquivo de rota dinâmica errado | 404 na navegação | tem que ser `[id].tsx` e `router.push(\`/produto/${id}\`)` |
+| 20 | Token só em memória | perde login ao fechar o app | `expo-secure-store` + reler no `_layout` (`useEffect`) |
 
 ---
 

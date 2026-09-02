@@ -6,10 +6,13 @@
 
 import { Campo } from "@/components/Campo";
 import { useAuth } from "@/hooks/useAuth";
+import { Botao } from "@/ui/Botao";
+import { Tela } from "@/ui/Tela";
+import { Titulo } from "@/ui/Texto";
 import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Alert, Button, StyleSheet, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 
 export default function Login() {
   const { login } = useAuth();
@@ -23,23 +26,27 @@ export default function Login() {
   });
 
   return (
-    <View style={styles.container}>
-      <Campo label="Usuário" value={username} onChangeText={setUsername} autoCapitalize="none" />
-      <Campo
-        label="Senha"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button
-        title={loginMutation.isPending ? "Entrando..." : "Entrar"}
-        onPress={() => loginMutation.mutate()}
-        disabled={loginMutation.isPending}
-      />
-    </View>
+    <Tela>
+      <View style={styles.centro}>
+        <Titulo style={styles.titulo}>Entrar</Titulo>
+        <Campo
+          label="Usuário"
+          value={username}
+          onChangeText={setUsername}
+          autoCapitalize="none"
+        />
+        <Campo label="Senha" value={password} onChangeText={setPassword} secureTextEntry />
+        <Botao
+          titulo="Entrar"
+          onPress={() => loginMutation.mutate()}
+          carregando={loginMutation.isPending}
+        />
+      </View>
+    </Tela>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", padding: 20 },
+  centro: { flex: 1, justifyContent: "center" },
+  titulo: { marginBottom: 16 },
 });

@@ -1,0 +1,8 @@
+A api publica para ser consultada é, com contexto de loja:
+https://fakestoreapi.com/
+
+A prova deve ter 7 enunciados de programação/codigo como o que esta nos arquivos, ativides e revisão da prova considerando o cenario da API publica (loja) e 3 discursivas de decisoes tecnicas. 
+
+Preferencialmente 2 arquivos: 
+1 - para consulta teorica
+2 - consulta teorica 

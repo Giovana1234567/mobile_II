@@ -1,10 +1,12 @@
 // ============================================================================
 // hooks/useAuth.ts  →  fluxo de autenticação básico.
-// Só a função de acesso à API. A tela de login é quem chama isto.
+// login  -> chama a API, guarda o token EM MEMÓRIA (interceptor) + SEGURO (SecureStore).
+// logout -> limpa os dois.
 // ============================================================================
 
 import { LoginRequest, LoginResponse } from "@/types/produto.response";
 import { api, definirToken } from "@/utils/api";
+import { limparToken, salvarToken } from "@/utils/sessao";
 
 export function useAuth() {
   // POST /auth/login  { username, password }  ->  { token }
@@ -13,12 +15,14 @@ export function useAuth() {
     const resposta = await api.post<LoginResponse>("/auth/login", credenciais);
     const token = resposta.data.token;
 
-    definirToken(token); // guarda o token -> interceptor passa a enviá-lo
+    definirToken(token); // memória: interceptor passa a enviar o token
+    await salvarToken(token); // disco (criptografado): sobrevive a fechar o app
     return token;
   };
 
-  const logout = () => {
+  const logout = async () => {
     definirToken(null);
+    await limparToken();
   };
 
   return { login, logout };

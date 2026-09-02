@@ -1,0 +1,4 @@
+ATIVIDADE
+- Na tela "axios.tsx", desenvolva um formulário onde o usuário possa informar nome e categoria do produto;
+- O formulário deve possuir um botão "Salvar", que ao pressionado irá realizar a chamada da função `criar` disponível no Hook.
+- Mostrar alertas indicando o sucesso ou falha da requisição.
