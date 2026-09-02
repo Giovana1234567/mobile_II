@@ -18,11 +18,10 @@ import { useProdutos } from "@/hooks/useProdutos";
 import { Produto } from "@/types/produto.response";
 import { Botao } from "@/ui/Botao";
 import { Tela } from "@/ui/Tela";
-import { aviso, confirmar } from "@/utils/aviso";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { FlatList, RefreshControl } from "react-native";
+import { Alert, FlatList, RefreshControl } from "react-native";
 
 export default function Index() {
   const { carregar, carregarPorCategoria, criar, deletar } = useProdutos();
@@ -42,48 +41,29 @@ export default function Index() {
 
   const criarMut = useMutation({
     mutationFn: (p: Produto) => criar(p),
-    onSuccess: (resp, enviado) => {
-      // A fakestoreapi NÃO persiste o POST: se a gente só invalidasse, o refetch
-      // traria a lista sem o item novo. Então refletimos direto no cache (update
-      // otimista) usando o id que a API devolveu.
-      const novo: Produto = { ...enviado, id: (resp as any)?.id ?? Date.now() };
-      qc.setQueryData<Produto[]>(chave, (antigos = []) => [novo, ...antigos]);
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["produtos"] });
       setTitulo("");
       setPreco("");
-      aviso("Produto cadastrado!", `"${novo.title}" foi adicionado à lista.`);
+      Alert.alert("Produto cadastrado!");
     },
-    onError: (e) => aviso("Erro ao cadastrar", (e as Error).message),
+    onError: (e) => Alert.alert("Erro ao cadastrar", e.message),
   });
 
   const excluirMut = useMutation({
     mutationFn: (id: number) => deletar(id),
-    onSuccess: (_resp, id) =>
-      qc.setQueryData<Produto[]>(chave, (antigos = []) =>
-        antigos.filter((p) => p.id !== id)
-      ),
-    onError: (e) => aviso("Erro ao excluir", (e as Error).message),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["produtos"] }),
+    onError: (e) => Alert.alert("Erro ao excluir", e.message),
   });
 
-  const salvar = async () => {
-    const precoNum = Number(preco.replace(",", "."));
-    if (!titulo.trim()) return aviso("Preencha o título");
-    if (!preco.trim() || Number.isNaN(precoNum) || precoNum <= 0)
-      return aviso("Preço inválido", "Informe um número maior que zero.");
-
-    const ok = await confirmar(
-      "Salvar produto?",
-      `${titulo.trim()} — R$ ${precoNum.toFixed(2)}`
-    );
-    if (!ok) return;
-
+  const salvar = () =>
     criarMut.mutate({
-      title: titulo.trim(),
-      price: precoNum,
+      title: titulo,
+      price: Number(preco),
       description: "",
       category: categoria ?? "electronics",
       image: "https://i.pravatar.cc",
     });
-  };
 
   if (isLoading) return <Carregando texto="Carregando produtos..." />;
   if (error) return <Erro texto={error.message} />;
